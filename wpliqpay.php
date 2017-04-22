@@ -38,6 +38,11 @@ function mainInit() {
 
 function readPostData()
 {
+    if ($_GET){
+        if ($_GET['download'] == '1'){
+            echo "<script>alert('Start download')</script>";
+        }
+    }
     if ($_POST) {
         global $wpdb;
         // SELECT sub_id FROM bot_rol WHERE id=\'{int(user_id)}\'
