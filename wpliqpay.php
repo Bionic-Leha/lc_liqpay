@@ -20,16 +20,18 @@ function mainInit() {
     global $wpdb;
     $wpdb->get_var("CREATE TABLE IF NOT EXISTS lp_dload(
     token TEXT NOT NULL,
-    expiry INT,
     pay_status TEXT,
     user_sig TEXT,
-    lp_sig TEXT,
-    active INT DEFAULT 0,
-    buy_date TEXT NULL
+    buy_date INT NULL
     )");
 
     $wpdb->get_var("CREATE TABLE IF NOT EXISTS lp_conf(
     file_link TEXT,
+    public_key TEXT,
+    private_key TEXT,
+    amount INT,
+    currency TEXT,
+    description TEXT,
     expiry_period INT,
     )");
 }
@@ -38,23 +40,32 @@ function readPostData()
 {
     if ($_POST) {
         global $wpdb;
-        $user_count = $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
-        echo "<script>alert('User count is {$user_count}')</script>";
+        // SELECT sub_id FROM bot_rol WHERE id=\'{int(user_id)}\'
+        isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = null;
         $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
         $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
-        $sign = base64_encode( sha1(
-            $private_key .
-            $_POST["data"] .
-            $private_key
-            , 1 ));
-        if ($sign == $_POST["signature"]){
-            $decoded_data = base64_decode($_POST["data"]);
-            echo "<script>alert('Signature true. Decoded data: {$decoded_data}')</script>";
-            $current = file_get_contents($file);
-            $current .= $decoded_data . "\n\n";
-            file_put_contents($file, $current);
-        }else {
-            echo "<script>alert('Signature fail.')</script>";
+        if ($token){
+            $sign = base64_encode(sha1($private_key . $_POST["data"] . $private_key, 1));
+            // SELECT sub_id FROM bot_rol WHERE id='{user_id}'
+            $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='$token'");
+            if ($sign == $_POST["signature"]){
+                //SELECT UNIX_TIMESTAMP()
+                if (!$buy_date){
+                $decoded_data = json_decode(base64_decode($_POST["data"]));
+                $stat = $decoded_data->{"status"};
+                $wpdb->get_var("UPDATE lp_dload SET buy_date=UNIX_TIMESTAMP(), pay_status='$stat' WHERE token='$token'");
+                echo "<script>alert('Signature verified')</script>";
+                $current = file_get_contents($file);
+                $current .= $decoded_data . "\n\n";
+                file_put_contents($file, $current);
+                }else{
+                    echo "<script>alert('Buy date already exist')</script>";
+                }
+            }else {
+                echo "<script>alert('Signature not verified!')</script>";
+            }
+        }else{
+            echo "<script>alert('Token not found')</script>";
         }
     }
 }
@@ -79,10 +90,11 @@ function liqpay_notice()
         'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
         'result_url' => 'https://itstest.ml',
         'verifycode' => 'Y',
-        'info' => '22814881997'
+        //'info' => '22814881997'
     );
     $html = $liqpay->cnb_form($lp_data);
-    $calc_sign = base64_encode(sha1($private_key.$lp_data.$private_key, 1));
+    $calc_sig = base64_encode(sha1($private_key.$lp_data.$private_key, 1));
+    $wpdb->get_var("UPDATE lp_dload SET user_sig='{$calc_sig}' WHERE token='$token'");
     $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
     print("<div id='liqpay-test' style='float: right;'>
                <br>Plugin url: " . BUYLP_URL . "<br>Plugin dir: " . BUYLP_DIR . "<br>
@@ -92,8 +104,6 @@ function liqpay_notice()
            </div>");
 }
 add_action('wp_print_scripts', 'liqpay_notice');
-//add_action('init', 'liqpay_notice');
-// test
 
 function generateLink(){
     global $wpdb;
