@@ -37,12 +37,16 @@ function mainInit() {
     )");
 }
 
+$dload_button = '';
+$token = '';
+
 function readPostData()
 {
+    global $dload_button, $token;
+    isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = generateLink();
     if ($_POST) {
         global $wpdb;
         // SELECT sub_id FROM bot_rol WHERE id=\'{int(user_id)}\'
-        isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = null;
         $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
         $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
         if ($token){
@@ -52,13 +56,13 @@ function readPostData()
             if ($sign == $_POST["signature"]){
                 //SELECT UNIX_TIMESTAMP()
                 if (!$buy_date){
-                $decoded_data = json_decode(base64_decode($_POST["data"]));
-                $stat = $decoded_data->{"status"};
-                $wpdb->get_var("UPDATE lp_dload SET buy_date=UNIX_TIMESTAMP(), pay_status='$stat' WHERE token='$token'");
+                    $decoded_data = json_decode(base64_decode($_POST["data"]));
+                    $stat = $decoded_data->{"status"};
+                    $wpdb->get_var("UPDATE lp_dload SET buy_date=UNIX_TIMESTAMP(), pay_status='$stat' WHERE token='$token'");
 //                echo "<script>alert('Signature verified')</script>";
-                $current = file_get_contents($file);
-                $current .= base64_decode($_POST["data"]) . "\n\n";
-                file_put_contents($file, $current);
+                    $current = file_get_contents($file);
+                    $current .= base64_decode($_POST["data"]) . "\n\n";
+                    file_put_contents($file, $current);
                 }else{
                     echo "<script>alert('Buy date already exist')</script>";
                 }
@@ -67,15 +71,27 @@ function readPostData()
             }
         }
     }
-
     if ($_GET){
+        global $wpdb;
         if ($_GET['download'] == '1'){
-            global $wpdb;
 //            echo "<script>alert('Token: {$_GET['token']}')</script>";
             $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='{$_GET['token']}'");
             if ($buy_date){
                 if (($buy_date + 3600) > date_timestamp_get(date_create())){
-                    echo "<script>alert('Downloading will start now')</script>";
+                    $dload_button = "<div class='page-promo__text-buttons'>
+                        <a href='https://itstest.ml/download-page/?download=2&token={$token}' class='btn btn-lg btn-lightblue page-promo__text-button'>Скачать книгу</a>
+                    </div>";
+                }else {
+                    $dload_button = "Link lifetime ended";
+                }
+            }else {
+                $dload_button = "Date of buy not found or broken token";
+            }
+        }
+        if ($_GET['download'] == '2'){
+            $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='{$_GET['token']}'");
+            if ($buy_date){
+                if (($buy_date + 3600) > date_timestamp_get(date_create())){
                     $file = ("file.pdf");
                     header ("Content-Type: application/octet-stream");
                     header ("Accept-Ranges: bytes");
@@ -83,22 +99,22 @@ function readPostData()
                     header ("Content-Disposition: attachment; filename=".$file);
                     readfile($file);
                 }else {
-                    echo "<script>alert('Link lifetime ended')</script>";
+                    $dload_button = "Link lifetime ended";
                 }
             }else {
-                echo "<script>alert('Date of buy not found or broken token')</script>";
+                $dload_button = "Date of buy not found or broken token";
             }
         }
     }
 }
 add_action('init', 'readPostData');
 
+
 function liqpay_notice()
 {
-    global $wpdb;
+    global $wpdb, $token;
     $public_key = "i83816479078";
     $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
-    isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = generateLink();
     $liqpay = new LiqPay($public_key, $private_key);
     $lp_data = array(
         'action' => 'pay',
@@ -109,7 +125,7 @@ function liqpay_notice()
         'version' => '3',
         'sandbox' => '1',
         'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
-        'result_url' => 'https://itstest.ml/?download=1&token=' . $token,
+        'result_url' => 'https://itstest.ml/download-page/?download=1&token=' . $token,
         'verifycode' => 'Y',
         //'info' => 'https://itstest.ml/?download=1&token=' . $token
     );
@@ -123,16 +139,15 @@ function liqpay_notice()
     echo "{$html}";
     echo "</div>";
 }
-// You token: {$token}
-// add_action('wp_print_scripts', 'liqpay_notice');
 add_shortcode('liqpay_buy_button', 'liqpay_notice');
 
+
 function downloadButton(){
-    echo "<div class='page-promo__text-buttons'>
-            <a href='' class='btn btn-lg btn-lightblue page-promo__text-button' target='_blank'>Скачать книгу</a>
-          </div>";
+    global $dload_button;
+    echo $dload_button;
 }
 add_shortcode('liqpay_download_button', 'downloadButton');
+
 
 function generateLink(){
     global $wpdb;
