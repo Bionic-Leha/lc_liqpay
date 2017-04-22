@@ -2,8 +2,8 @@
 
 /*
 Plugin Name: Wpliqpay
-Plugin URI: http://URI_Of_Page_Describing_Plugin_and_Updates
-Description: LiqPay purchase and unique download link
+Plugin URI: localhost
+Description: LiqPay Purchase with unique download link
 Version: 0.1
 Author: Bionic
 Author URI: https://farbio.xyz
@@ -14,6 +14,7 @@ define('BUYLP_DIR', plugin_dir_path(__FILE__));
 define('BUYLP_URL', plugin_dir_url(__FILE__));
 
 require(BUYLP_DIR . 'LiqPay.php');
+require(BUYLP_DIR . 'options.php');
 
 register_activation_hook(__FILE__, 'mainInit');
 function mainInit() {
@@ -64,8 +65,6 @@ function readPostData()
             }else {
                 echo "<script>alert('Signature not verified!')</script>";
             }
-        }else{
-            echo "<script>alert('Token not found')</script>";
         }
     }
 
@@ -97,7 +96,6 @@ add_action('init', 'readPostData');
 function liqpay_notice()
 {
     global $wpdb;
-    $user_count = $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
     $public_key = "i83816479078";
     $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
     isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = generateLink();
@@ -118,9 +116,23 @@ function liqpay_notice()
     $html = $liqpay->cnb_form($lp_data);
     $calc_sig = base64_encode(sha1($private_key.$lp_data.$private_key, 1));
     $wpdb->get_var("UPDATE lp_dload SET user_sig='{$calc_sig}' WHERE token='$token'");
-    print("<div id='liqpay-test' style='float: right;'>You token: {$token}<br>{$html}<br></div>");
+    echo "<div id='liqpay-test' style='float: right;'>";
+    if (get_option('lpd_sandbox')['checkbox'] == '1'){
+        print("Testing mode");
+    }
+    echo "{$html}";
+    echo "</div>";
 }
-add_action('wp_print_scripts', 'liqpay_notice');
+// You token: {$token}
+// add_action('wp_print_scripts', 'liqpay_notice');
+add_shortcode('liqpay_buy_button', 'liqpay_notice');
+
+function downloadButton(){
+    echo "<div class='page-promo__text-buttons'>
+            <a href='' class='btn btn-lg btn-lightblue page-promo__text-button' target='_blank'>Скачать книгу</a>
+          </div>";
+}
+add_shortcode('liqpay_download_button', 'downloadButton');
 
 function generateLink(){
     global $wpdb;
