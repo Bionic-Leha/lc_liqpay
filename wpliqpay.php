@@ -77,6 +77,12 @@ function readPostData()
             if ($buy_date){
                 if (($buy_date + 3600) > date_timestamp_get(date_create())){
                     echo "<script>alert('Downloading will start now')</script>";
+                    $file = ("file.pdf");
+                    header ("Content-Type: application/octet-stream");
+                    header ("Accept-Ranges: bytes");
+                    header ("Content-Length: ".filesize($file));
+                    header ("Content-Disposition: attachment; filename=".$file);
+                    readfile($file);
                 }else {
                     echo "<script>alert('Link lifetime ended')</script>";
                 }
