@@ -14,7 +14,10 @@ define('BUYLP_DIR', plugin_dir_path(__FILE__));
 define('BUYLP_URL', plugin_dir_url(__FILE__));
 
 require(BUYLP_DIR . 'LiqPay.php');
-require(BUYLP_DIR . 'options.php');
+
+if ( is_admin() ){
+    require(BUYLP_DIR . 'options.php');
+}
 
 register_activation_hook(__FILE__, 'mainInit');
 function mainInit() {
@@ -46,20 +49,16 @@ function readPostData()
     isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = generateLink();
     if ($_POST) {
         global $wpdb;
-        // SELECT sub_id FROM bot_rol WHERE id=\'{int(user_id)}\'
         $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
         $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
         if ($token){
             $sign = base64_encode(sha1($private_key . $_POST["data"] . $private_key, 1));
-            // SELECT sub_id FROM bot_rol WHERE id='{user_id}'
             $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='$token'");
             if ($sign == $_POST["signature"]){
-                //SELECT UNIX_TIMESTAMP()
                 if (!$buy_date){
                     $decoded_data = json_decode(base64_decode($_POST["data"]));
                     $stat = $decoded_data->{"status"};
                     $wpdb->get_var("UPDATE lp_dload SET buy_date=UNIX_TIMESTAMP(), pay_status='$stat' WHERE token='$token'");
-//                echo "<script>alert('Signature verified')</script>";
                     $current = file_get_contents($file);
                     $current .= base64_decode($_POST["data"]) . "\n\n";
                     file_put_contents($file, $current);
@@ -74,7 +73,6 @@ function readPostData()
     if ($_GET){
         global $wpdb;
         if ($_GET['download'] == '1'){
-//            echo "<script>alert('Token: {$_GET['token']}')</script>";
             $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='{$_GET['token']}'");
             if ($buy_date){
                 if (($buy_date + 3600) > date_timestamp_get(date_create())){
