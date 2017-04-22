@@ -38,11 +38,6 @@ function mainInit() {
 
 function readPostData()
 {
-    if ($_GET){
-        if ($_GET['download'] == '1'){
-            echo "<script>alert('Start download')</script>";
-        }
-    }
     if ($_POST) {
         global $wpdb;
         // SELECT sub_id FROM bot_rol WHERE id=\'{int(user_id)}\'
@@ -59,9 +54,9 @@ function readPostData()
                 $decoded_data = json_decode(base64_decode($_POST["data"]));
                 $stat = $decoded_data->{"status"};
                 $wpdb->get_var("UPDATE lp_dload SET buy_date=UNIX_TIMESTAMP(), pay_status='$stat' WHERE token='$token'");
-                echo "<script>alert('Signature verified')</script>";
+//                echo "<script>alert('Signature verified')</script>";
                 $current = file_get_contents($file);
-                $current .= $decoded_data . "\n\n";
+                $current .= base64_decode($_POST["data"]) . "\n\n";
                 file_put_contents($file, $current);
                 }else{
                     echo "<script>alert('Buy date already exist')</script>";
@@ -71,6 +66,23 @@ function readPostData()
             }
         }else{
             echo "<script>alert('Token not found')</script>";
+        }
+    }
+
+    if ($_GET){
+        if ($_GET['download'] == '1'){
+            global $wpdb;
+//            echo "<script>alert('Token: {$_GET['token']}')</script>";
+            $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='{$_GET['token']}'");
+            if ($buy_date){
+                if (($buy_date + 3600) > date_timestamp_get(date_create())){
+                    echo "<script>alert('Downloading will start now')</script>";
+                }else {
+                    echo "<script>alert('Link lifetime ended')</script>";
+                }
+            }else {
+                echo "<script>alert('Date of buy not found or broken token')</script>";
+            }
         }
     }
 }
@@ -93,20 +105,14 @@ function liqpay_notice()
         'version' => '3',
         'sandbox' => '1',
         'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
-        'result_url' => 'https://itstest.ml',
+        'result_url' => 'https://itstest.ml/?download=1&token=' . $token,
         'verifycode' => 'Y',
-        //'info' => '22814881997'
+        //'info' => 'https://itstest.ml/?download=1&token=' . $token
     );
     $html = $liqpay->cnb_form($lp_data);
     $calc_sig = base64_encode(sha1($private_key.$lp_data.$private_key, 1));
     $wpdb->get_var("UPDATE lp_dload SET user_sig='{$calc_sig}' WHERE token='$token'");
-    $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
-    print("<div id='liqpay-test' style='float: right;'>
-               <br>Plugin url: " . BUYLP_URL . "<br>Plugin dir: " . BUYLP_DIR . "<br>
-               User count: {$user_count}<br>
-               {$html}<br>
-               Test token: {$token}
-           </div>");
+    print("<div id='liqpay-test' style='float: right;'>You token: {$token}<br>{$html}<br></div>");
 }
 add_action('wp_print_scripts', 'liqpay_notice');
 
