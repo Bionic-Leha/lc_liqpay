@@ -31,8 +31,6 @@ function mainInit() {
 
     $wpdb->get_var("CREATE TABLE IF NOT EXISTS lp_conf(
     file_link TEXT,
-    public_key TEXT,
-    private_key TEXT,
     amount INT,
     currency TEXT,
     description TEXT,
@@ -49,7 +47,7 @@ function readPostData()
     isset($_COOKIE["download_token"]) ? $token = $_COOKIE["download_token"] : $token = generateLink();
     if ($_POST) {
         global $wpdb;
-        $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
+        $private_key = get_option('lpd_private_key')['input'];
         $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
         if ($token){
             $sign = base64_encode(sha1($private_key . $_POST["data"] . $private_key, 1));
@@ -111,9 +109,10 @@ add_action('init', 'readPostData');
 function liqpay_notice()
 {
     global $wpdb, $token;
-    $public_key = "i83816479078";
-    $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
+    $public_key = get_option('lpd_public_key')['input'];
+    $private_key = get_option('lpd_private_key')['input'];
     $liqpay = new LiqPay($public_key, $private_key);
+    get_option('lpd_sandbox')['checkbox'] == '1' ? $sand_box = '1' : $sand_box = '0';
     $lp_data = array(
         'action' => 'pay',
         'amount' => '1',
@@ -121,7 +120,7 @@ function liqpay_notice()
         'description' => 'description text',
         //'order_id'       => '0000000001',
         'version' => '3',
-        'sandbox' => '1',
+        'sandbox' => $sand_box,
         'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
         'result_url' => 'https://itstest.ml/download-page/?download=1&token=' . $token,
         'verifycode' => 'Y',
@@ -131,7 +130,7 @@ function liqpay_notice()
     $calc_sig = base64_encode(sha1($private_key.$lp_data.$private_key, 1));
     $wpdb->get_var("UPDATE lp_dload SET user_sig='{$calc_sig}' WHERE token='$token'");
     echo "<div id='liqpay-test' style='float: right;'>";
-    if (get_option('lpd_sandbox')['checkbox'] == '1'){
+    if ($sand_box == '1'){
         print("Testing mode");
     }
     echo "{$html}";
