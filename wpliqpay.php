@@ -66,9 +66,20 @@ function liqpay_notice()
     // init
     print("<div id='liqpay-test' style='float: right;'>
                <br>Plugin url: " . BUYLP_URL . "<br>Plugin dir: " . BUYLP_DIR . "<br>
-               {$html}
+               {$html}<br>
+               Test token: " . generateLink() . "
            </div>");
 }
 add_action('wp_print_scripts', 'liqpay_notice');
 //add_action('init', 'liqpay_notice');
 // test
+
+function generateLink(){
+    $chars = 'qwertyuiopasdfghjklzxcvbnm1234567890QAZWSXEDCRFVTGBYHNUJMIKOLP';
+    $numChars = strlen($chars);
+    $string = '';
+    for ($i = 0; $i < 30; $i++) {
+        $string .= substr($chars, rand(1, $numChars) - 1, 1);
+    }
+    return $string;
+}
