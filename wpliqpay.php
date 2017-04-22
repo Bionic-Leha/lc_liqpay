@@ -30,11 +30,8 @@ function mainInit() {
     )");
 
     $wpdb->get_var("CREATE TABLE IF NOT EXISTS lp_conf(
-    file_link TEXT,
-    amount INT,
     currency TEXT,
     description TEXT,
-    expiry_period INT,
     )");
 }
 
@@ -87,8 +84,8 @@ function readPostData()
         if ($_GET['download'] == '2'){
             $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='{$_GET['token']}'");
             if ($buy_date){
-                if (($buy_date + 3600) > date_timestamp_get(date_create())){
-                    $file = ("file.pdf");
+                if (($buy_date + intval(get_option('lpd_exp_time')['input'])*60) > date_timestamp_get(date_create())){
+                    $file = (get_option('lpd_file_link')['input']);
                     header ("Content-Type: application/octet-stream");
                     header ("Accept-Ranges: bytes");
                     header ("Content-Length: ".filesize($file));

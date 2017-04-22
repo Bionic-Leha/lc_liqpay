@@ -42,8 +42,8 @@ function plugin_settings(){
     add_settings_field('lpd_private_key', 'Private Key',  'get_lpd_private_key',    'lpd_config_main', 'section_id');
     add_settings_field('lpd_amount',      'Amount',       'get_lpd_amount',         'lpd_config_main', 'section_id');
     add_settings_field('lpd_exp_time', 'Expiry Period (mins)', 'get_lpd_exp_time',  'lpd_config_main', 'section_id');
+    add_settings_field('lpd_file_link', 'Link to downloading file', 'get_lpd_file_link', 'lpd_config_main', 'section_id');
     add_settings_field('lpd_sandbox', 'Sandbox (fake purchase)', 'get_lpd_sandbox', 'lpd_config_main', 'section_id');
-    add_settings_field('lpd_upload_file', 'Upload File', 'get_lpd_upload_file', 'lpd_config_main', 'section_id');
 }
 
 function get_lpd_public_key(){
@@ -81,19 +81,11 @@ function get_lpd_sandbox(){
     <label><input type="checkbox" name="lpd_sandbox[checkbox]" value="1" <?php checked( 1, $val ) ?> /> yes</label>
     <?php
 }
-function get_lpd_upload_file(){
-    $val = get_option('lpd_upload_file');
+function get_lpd_file_link(){
+    $val = get_option('lpd_file_link');
     $val = $val['input'];
     ?>
-    <form enctype="multipart/form-data" action="__URL__" method="POST">
-        <!-- Поле MAX_FILE_SIZE должно быть указано до поля загрузки файла -->
-        <input type="hidden" name="MAX_FILE_SIZE" value="30000" />
-        <!-- Название элемента input определяет имя в массиве $_FILES -->
-        <!-- $_FILES['userfile']['name'] -->
-        <input name="lpd_upload_file[name]" type="file" />
-        <input type="submit" value="Send File" />
-    </form>
-    <!-- <label><input type="checkbox" name="lpd_sandbox[checkbox]" value="1" <?php checked( 1, $val ) ?> /> yes</label> -->
+    <input type="text" name="lpd_file_link[input]" value="<?php echo esc_attr( $val ) ?>" />
     <?php
 }
 
