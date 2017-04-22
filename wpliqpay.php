@@ -15,27 +15,60 @@ define('BUYLP_URL', plugin_dir_url(__FILE__));
 
 require(BUYLP_DIR . 'LiqPay.php');
 
+
+function readPostData()
+{
+    if ($_POST) {
+        global $wpdb;
+        $user_count = $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
+        echo "<script>alert('User count is {$user_count}')</script>";
+        $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
+        $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
+        $sign = base64_encode( sha1(
+            $private_key .
+            $_POST["data"] .
+            $private_key
+            , 1 ));
+        if ($sign == $_POST["signature"]){
+            $decoded_data = base64_decode($_POST["data"]);
+            echo "<script>alert('Signature true. Decoded data: {$decoded_data}')</script>";
+            $current = file_get_contents($file);
+            $current .= $decoded_data . "\n\n";
+            file_put_contents($file, $current);
+        }else {
+            echo "<script>alert('Signature fail.')</script>";
+        }
+    }
+}
+add_action('init', 'readPostData');
+
 function liqpay_notice()
 {
+    global $wpdb;
+    $user_count = $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->users");
+    $public_key = "i83816479078";
+    $private_key = "8zmMxw0qJLPHCRPc2c1lkYU4OalUEASGS4i4DaJU";
+
+    $liqpay = new LiqPay($public_key, $private_key);
+    $html = $liqpay->cnb_form(array(
+        'action' => 'pay',
+        'amount' => '1',
+        'currency' => 'USD',
+        'description' => 'description text',
+        //'order_id'       => '0000000001',
+        'version' => '3',
+        'sandbox' => '1',
+        'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
+        'result_url' => 'https://itstest.ml',
+        'verifycode' => 'Y',
+        'info' => '22814881997'
+    ));
+    // init
     print("<div id='liqpay-test' style='float: right;'>
-            <br>Plugin url: " . BUYLP_URL . "<br>Plugin dir: " . BUYLP_DIR . "<br>
-            <a onclick=\"window.open('https://www.liqpay.com/ru/checkout/card/liqpaybuy','','Toolbar=1,Location=0,Directories=0,Status=0,Menubar=0,Scrollbars=0,Resizable=0,Width=1280,Height=720');\"><button>Buy via LiqPay</button></a>
-            <!--<iframe id='liqpay-frame' src='https://www.liqpay.com/ru/checkout/card/liqpaybuy' style='background-color: transparent;' scrolling='no' frameborder='0'></iframe> -->
-            <form method=\"POST\" accept-charset=\"utf-8\" action=\"https://www.liqpay.com/api/3/checkout\">
-	            <input type=\"hidden\" name=\"data\" value=\"eyJ2ZXJzaW9uIjozLCJhY3Rpb24iOiJwYXkiLCJwdWJsaWNfa2V5IjoiaTgzODE2NDc5MDc4IiwiYW1vdW50IjoiNSIsImN1cnJlbmN5IjoiVUFIIiwiZGVzY3JpcHRpb24iOiLQnNC+0Lkg0YLQvtCy0LDRgCIsInR5cGUiOiJidXkiLCJsYW5ndWFnZSI6InJ1In0=\" />
-	            <input type=\"hidden\" name=\"signature\" value=\"c9eV0+SUdftjHQRWgbPPCFA7o3M=\" />
-	            <button style=\"border: none !important; display:inline-block !important;text-align: center !important;padding: 7px 20px !important;
-	            	color: #fff !important; font-size:16px !important; font-weight: 600 !important; font-family:OpenSans, sans-serif; cursor: pointer !important; border-radius: 2px !important;
-	            	background: rgb(122,183,43) !important;\"onmouseover=\"this.style.opacity='0.5';\" onmouseout=\"this.style.opacity='1';\">
-	            	<img src=\"https://static.liqpay.com/buttons/logo-small.png\" name=\"btn_text\"
-	            		style=\"margin-right: 7px !important; vertical-align: middle !important;\"/>
-	            	<span style=\"vertical-align:middle; !important\">Оплатить 5 UAH</span>
-	            </button>
-            </form>
+               <br>Plugin url: " . BUYLP_URL . "<br>Plugin dir: " . BUYLP_DIR . "<br>
+               {$html}
            </div>");
 }
-
 add_action('wp_print_scripts', 'liqpay_notice');
 //add_action('init', 'liqpay_notice');
-
 // test
