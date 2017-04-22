@@ -10,13 +10,14 @@ Author URI: https://farbio.xyz
 License: GNU GPL 3.0
 */
 
-define('BUYLP_DIR', plugin_dir_path(__FILE__));
-define('BUYLP_URL', plugin_dir_url(__FILE__));
+define('LPD_DIR', plugin_dir_path(__FILE__));
+define('LPD_URL', plugin_dir_url(__FILE__));
+define('DOMAIN', get_site_url());
 
-require(BUYLP_DIR . 'LiqPay.php');
+require(LPD_DIR . 'LiqPay.php');
 
 if ( is_admin() ){
-    require(BUYLP_DIR . 'options.php');
+    require(LPD_DIR . 'options.php');
 }
 
 register_activation_hook(__FILE__, 'mainInit');
@@ -45,7 +46,7 @@ function readPostData()
     if ($_POST) {
         global $wpdb;
         $private_key = get_option('lpd_private_key')['input'];
-        $file = '/var/www/liqpay/wp-content/plugins/wpliqpay/purchase_data.txt';
+        $file = LPD_DIR . 'purchase_data.txt';
         if ($token){
             $sign = base64_encode(sha1($private_key . $_POST["data"] . $private_key, 1));
             $buy_date = $wpdb->get_var("SELECT buy_date FROM lp_dload WHERE token='$token'");
@@ -72,7 +73,7 @@ function readPostData()
             if ($buy_date){
                 if (($buy_date + 3600) > date_timestamp_get(date_create())){
                     $dload_button = "<div class='page-promo__text-buttons'>
-                        <a href='https://itstest.ml/download-page/?download=2&token={$token}' class='btn btn-lg btn-lightblue page-promo__text-button'>Скачать книгу</a>
+                        <a href='" . DOMAIN . "/download-page/?download=2&token={$token}' class='btn btn-lg btn-lightblue page-promo__text-button'>Скачать книгу</a>
                     </div>";
                 }else {
                     $dload_button = "Link lifetime ended";
@@ -115,12 +116,12 @@ function liqpay_notice()
         'amount' => '1',
         'currency' => 'USD',
         'description' => 'description text',
-        //'order_id'       => '0000000001',
         'version' => '3',
         'sandbox' => $sand_box,
-        'server_url' => 'https://itstest.ml/wp-content/plugins/wpliqpay/post_echo.php',
-        'result_url' => 'https://itstest.ml/download-page/?download=1&token=' . $token,
-        'verifycode' => 'Y',
+        'server_url' => LPD_URL . 'post_echo.php',
+        'result_url' => DOMAIN . '/download-page/?download=1&token=' . $token,
+        'verifycode' => 'Y'
+        //'order_id'       => '0000000001',
         //'info' => 'https://itstest.ml/?download=1&token=' . $token
     );
     $html = $liqpay->cnb_form($lp_data);

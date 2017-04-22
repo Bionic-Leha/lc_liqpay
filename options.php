@@ -29,9 +29,11 @@ function lpd_options_page(){
 add_action('admin_init', 'plugin_settings');
 function plugin_settings(){
     // params: $option_group, $option_name, $sanitize_callback
-    register_setting('option_group', 'option_name', 'sanitize_callback');
     register_setting('option_group', 'lpd_public_key', 'sanitize_callback');
     register_setting('option_group', 'lpd_private_key', 'sanitize_callback');
+    register_setting('option_group', 'lpd_amount', 'sanitize_callback');
+    register_setting('option_group', 'lpd_exp_time', 'sanitize_callback');
+    register_setting('option_group', 'lpd_file_link', 'sanitize_callback');
     register_setting('option_group', 'lpd_sandbox', 'sanitize_callback');
 
     // params: $id, $title, $callback, $page
